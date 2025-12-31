@@ -4,10 +4,9 @@ import requests
 import re
 import google.generativeai as genai
 
-# ----- API KEYS -----
-import streamlit as st
-OPENWEATHER_KEY = st.secrets["OPENWEATHER_KEY"]
-GEMINI_KEY = st.secrets["GEMINI_KEY"]
+# ----- API KEYS (SAFE) -----
+OPENWEATHER_KEY = st.secrets.get("OPENWEATHER_KEY", "")
+GEMINI_KEY = st.secrets.get("GEMINI_KEY", "")
 
 # ----- WEATHER TOOL -----
 def get_weather(city):
@@ -18,14 +17,22 @@ def get_weather(city):
         return "City ka weather nahi mil saka."
 
     data = r.json()
-    return f"{city} ka temperature {data['main']['temp']}°C hai."
+    return f"{city.title()} ka temperature {data['main']['temp']}°C hai."
 
-# ----- GEMINI -----
-genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel("models/gemini-1.5-flash")
+# ----- GEMINI SETUP (OPTIONAL) -----
+model = None
+if GEMINI_KEY:
+    genai.configure(api_key=GEMINI_KEY)
+    model = genai.GenerativeModel("models/gemini-1.5-flash")
 
 def normal_chat(msg):
-    return model.generate_content(msg).text
+    if not model:
+        return "Main weather information provide kar sakta hoon. Weather poochiye."
+
+    try:
+        return model.generate_content(msg).text
+    except Exception:
+        return "AI response temporarily unavailable."
 
 # ----- CHATBOT -----
 def chatbot(user_input):
@@ -37,9 +44,10 @@ def chatbot(user_input):
     return normal_chat(user_input)
 
 # ----- STREAMLIT UI -----
-st.title("Weather Chatbot")
+st.title("Weather Chatbot 🌦️")
 
 user = st.text_input("Message")
 
 if user:
     st.write(chatbot(user))
+
