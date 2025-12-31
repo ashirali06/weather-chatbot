@@ -2,11 +2,10 @@
 import streamlit as st
 import requests
 import re
-import google.generativeai as genai
 
-# ----- API KEYS (SAFE) -----
+# ----- API KEYS -----
 OPENWEATHER_KEY = st.secrets.get("OPENWEATHER_KEY", "")
-GEMINI_KEY = st.secrets.get("GEMINI_KEY", "")
+HF_API_KEY = st.secrets.get("HF_API_KEY", "")
 
 # ----- WEATHER TOOL -----
 def get_weather(city):
@@ -19,20 +18,30 @@ def get_weather(city):
     data = r.json()
     return f"{city.title()} ka temperature {data['main']['temp']}°C hai."
 
-# ----- GEMINI SETUP (OPTIONAL) -----
-model = None
-if GEMINI_KEY:
-    genai.configure(api_key=GEMINI_KEY)
-    model = genai.GenerativeModel("models/gemini-1.5-flash")
-
+# ----- HUGGING FACE CHAT -----
 def normal_chat(msg):
-    if not model:
-        return "Main weather information provide kar sakta hoon. Weather poochiye."
+    if not HF_API_KEY:
+        return "AI service unavailable."
+
+    url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
+    headers = {
+        "Authorization": f"Bearer {HF_API_KEY}"
+    }
+    payload = {
+        "inputs": msg
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+
+    if response.status_code != 200:
+        return "AI response error."
+
+    data = response.json()
 
     try:
-        return model.generate_content(msg).text
-    except Exception:
-        return "AI response temporarily unavailable."
+        return data[0]["generated_text"]
+    except:
+        return "AI response unavailable."
 
 # ----- CHATBOT -----
 def chatbot(user_input):
@@ -40,7 +49,8 @@ def chatbot(user_input):
         match = re.search(r"in ([a-zA-Z ]+)", user_input.lower())
         if match:
             return get_weather(match.group(1))
-        return "City ka naam bataein."
+        return "Please city ka naam batayein."
+
     return normal_chat(user_input)
 
 # ----- STREAMLIT UI -----
@@ -50,4 +60,3 @@ user = st.text_input("Message")
 
 if user:
     st.write(chatbot(user))
-
