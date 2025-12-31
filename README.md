@@ -3,7 +3,7 @@
 This is a simple chatbot built using Streamlit and Python.
 
 Features:
-- Normal conversation using Gemini API
+- Normal conversation using hugging face
 - Live weather information using OpenWeather API
 - Tool-based logic (weather API called only when required)
 
