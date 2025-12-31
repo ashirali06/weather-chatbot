@@ -18,7 +18,6 @@ def get_weather(city):
     data = r.json()
     return f"{city.title()} ka temperature {data['main']['temp']}°C hai."
 
-# ----- HUGGING FACE CHAT -----
 def normal_chat(msg):
     if not HF_API_KEY:
         return "AI service unavailable."
@@ -28,35 +27,29 @@ def normal_chat(msg):
         "Authorization": f"Bearer {HF_API_KEY}"
     }
     payload = {
-        "inputs": msg
+        "inputs": msg,
+        "options": {
+            "wait_for_model": True
+        }
     }
 
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=headers, json=payload, timeout=30)
 
     if response.status_code != 200:
-        return "AI response error."
+        return "AI service busy. Try again."
 
     data = response.json()
 
-    try:
-        return data[0]["generated_text"]
-    except:
-        return "AI response unavailable."
+    # Case 1: model loading or HF error
+    if isinstance(data, dict):
+        if "error" in data:
+            return "AI model is loading. Please try again in a few seconds."
+        if "estimated_time" in data:
+            return "AI is warming up. Try again shortly."
 
-# ----- CHATBOT -----
-def chatbot(user_input):
-    if "weather" in user_input.lower():
-        match = re.search(r"in ([a-zA-Z ]+)", user_input.lower())
-        if match:
-            return get_weather(match.group(1))
-        return "Please city ka naam batayein."
+    # Case 2: normal response
+    if isinstance(data, list) and len(data) > 0:
+        return data[0].get("generated_text", "No response from AI.")
 
-    return normal_chat(user_input)
+    return "AI response unavailable."
 
-# ----- STREAMLIT UI -----
-st.title("Weather Chatbot 🌦️")
-
-user = st.text_input("Message")
-
-if user:
-    st.write(chatbot(user))
