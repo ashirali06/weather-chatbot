@@ -22,7 +22,7 @@ def get_weather(city):
 
 # ----- GEMINI -----
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel("gemini-pro")
+model = genai.GenerativeModel("models/gemini-1.5-flash")
 
 def normal_chat(msg):
     return model.generate_content(msg).text
